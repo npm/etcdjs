@@ -1,9 +1,11 @@
-# etcdjs
+# @npmcorp/etcdjs
+
+npm fork of `etcdjs`
 
 Low level etcd v2 & v3 client written in Javascript with failover support
 
 ```
-npm install etcdjs
+npm install @npmcorp/etcdjs
 ```
 
 ## Usage
@@ -11,7 +13,7 @@ npm install etcdjs
 Pass a connection string
 
 ``` js
-var etcdjs = require('etcdjs')
+var etcdjs = require('@npmcorp/etcdjs')
 var store = etcdjs('127.0.0.1:4001')
 
 store.set('hello', 'world', function(err, result) {
