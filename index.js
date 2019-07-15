@@ -5,21 +5,23 @@ var roundround = require('roundround')
 
 var noop = function () {}
 
-var Stats = function (client) {
-  this._client = client
-}
+class Stats {
+  constructor (client) {
+    this._client = client
+  }
 
-Stats.prototype.self = function (machine, cb) {
-  if (typeof machine === 'function') return this.self(null, machine)
-  this._client._request({ uri: (machine || '') + '/v2/stats/self', json: true }, cb)
-}
+  self (machine, cb) {
+    if (typeof machine === 'function') return this.self(null, machine)
+    this._client._request({ uri: (machine || '') + '/v2/stats/self', json: true }, cb)
+  }
 
-Stats.prototype.store = function (cb) {
-  this._client._request({ uri: '/v2/stats/store', json: true }, cb)
-}
+  store (cb) {
+    this._client._request({ uri: '/v2/stats/store', json: true }, cb)
+  }
 
-Stats.prototype.leader = function (cb) {
-  this._client._request({ uri: '/v2/stats/leader', json: true }, cb)
+  leader (cb) {
+    this._client._request({ uri: '/v2/stats/leader', json: true }, cb)
+  }
 }
 
 var normalizeUrl = function (url) {
