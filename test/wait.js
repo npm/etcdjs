@@ -26,12 +26,12 @@ test('wait twice', function (store, t) {
 })
 
 test('cancel wait', function (store, t) {
-  var stop_wait = store.wait('etcdjs/test', function (err, result) {
+  var stopWait = store.wait('etcdjs/test', function (err, result) {
     t.ok(!err, 'no error')
     t.fail('unexpected callback, wait should have stopped')
   })
 
-  stop_wait()
+  stopWait()
   store.set('etcdjs/test', 'value')
 
   setTimeout(function () {

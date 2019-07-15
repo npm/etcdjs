@@ -1,3 +1,5 @@
+'use strict'
+
 var request = require('request')
 var roundround = require('roundround')
 
@@ -9,15 +11,15 @@ var Stats = function (client) {
 
 Stats.prototype.self = function (machine, cb) {
   if (typeof machine === 'function') return this.self(null, machine)
-  this._client._request({uri: (machine || '') + '/v2/stats/self', json: true}, cb)
+  this._client._request({ uri: (machine || '') + '/v2/stats/self', json: true }, cb)
 }
 
 Stats.prototype.store = function (cb) {
-  this._client._request({uri: '/v2/stats/store', json: true}, cb)
+  this._client._request({ uri: '/v2/stats/store', json: true }, cb)
 }
 
 Stats.prototype.leader = function (cb) {
-  this._client._request({uri: '/v2/stats/leader', json: true}, cb)
+  this._client._request({ uri: '/v2/stats/leader', json: true }, cb)
 }
 
 var normalizeUrl = function (url) {
@@ -116,9 +118,9 @@ Client.prototype.get = function (key, opts, cb) {
   }, function (err, body) {
     if (err) return cb(err)
 
-    if (opts.json && body) decodeJSON(body.node);
+    if (opts.json && body) decodeJSON(body.node)
     cb(null, body)
-  });
+  })
 }
 
 Client.prototype.wait = function (key, opts, cb) {
@@ -140,8 +142,8 @@ Client.prototype.wait = function (key, opts, cb) {
     // solution would be to do a `get` without the index and start waiting from there
     // https://github.com/coreos/etcd/blob/master/Documentation/api.md#waiting-for-a-change
     if (err && err.code === 401 && err.message === 'The event in requested index is outdated and cleared' && err.index) {
-      opts.waitIndex = err.index + 1;
-      return self.get(key, opts, onresult);
+      opts.waitIndex = err.index + 1
+      return self.get(key, opts, onresult)
     }
     if (result) opts.waitIndex = result.node.modifiedIndex + 1
     if (err) return cb(err, null, next)
@@ -223,7 +225,7 @@ Client.prototype._key = function (key) {
 
 Client.prototype.machines = function (cb) {
   var self = this
-  this._request({uri: '/v2/machines'}, function (err, body) {
+  this._request({ uri: '/v2/machines' }, function (err, body) {
     if (err) return cb(err)
 
     body = body.trim()
@@ -244,7 +246,7 @@ Client.prototype.machines = function (cb) {
 }
 
 Client.prototype.leader = function (cb) {
-  this._request({uri: '/v2/stats/leader'}, cb)
+  this._request({ uri: '/v2/stats/leader' }, cb)
 }
 
 Client.prototype.destroy = function () {
@@ -325,7 +327,7 @@ Client.prototype._resolveToken = function (cb) {
     self._wait = null
   }
 
-  request(this._discovery, {json: true}, function (err, response) {
+  request(this._discovery, { json: true }, function (err, response) {
     if (err) return done(err)
     if (response.statusCode !== 200) return done(new Error('discovery token could not be resolved'))
 
@@ -359,11 +361,17 @@ Client.prototype._request2 = function (opts, cb) {
 
     if (canceled) return
     if (self._destroyed) return cb(new Error('store destroyed'))
-    if (err && tries-- > 0) return request(opts.uri = self._next() + path, opts, onresponse)
+    if (err && tries-- > 0) {
+      opts.uri = self._next() + path
+      return request(opts.uri, opts, onresponse)
+    }
     if (err) return cb(err)
 
-    if (response.statusCode === 307) return request(opts.uri = response.headers.location, opts, onresponse)
-    if (response.statusCode === 404 && !opts.method || opts.method === 'GET') return cb()
+    if (response.statusCode === 307) {
+      opts.uri = response.headers.location
+      return request(opts.uri, opts, onresponse)
+    }
+    if (response.statusCode === 404 && (!opts.method || opts.method === 'GET')) return cb()
     if (response.statusCode > 299) return cb(toError(response))
 
     var body = response.body
