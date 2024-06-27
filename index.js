@@ -2,7 +2,6 @@
 
 var roundround = require('roundround')
 const axios = require('axios')
-const controller = new AbortController();
 
 var noop = function () {}
 
@@ -329,6 +328,7 @@ Client.prototype._resolveToken = function (cb) {
     while (self._wait.length) self._wait.shift()(err)
     self._wait = null
   }
+  const controller = new AbortController()
 
   axios.get(this._discovery, {signal: controller.signal})
   .then(response => {
@@ -346,7 +346,8 @@ Client.prototype._resolveToken = function (cb) {
 
     done()
   })
-  .catch(err => {return done(err)});
+  .catch(err => {return done(err)})
+ controller.abort()
 }
 
 Client.prototype._request2 = function (opts, cb) {
@@ -357,6 +358,7 @@ Client.prototype._request2 = function (opts, cb) {
   opts.timeout = this._timeout
 
   var canceled = false
+  const controller = new AbortController()
 
   if (this._destroyed) return nextTick(cb, new Error('store destroyed'))
 
@@ -364,7 +366,7 @@ Client.prototype._request2 = function (opts, cb) {
     if (canceled) return
     if (self._destroyed) return cb(new Error('store destroyed'))
 
-    axios(opts)
+    axios(opts, {signal: controller.signal})
       .then(response => {
         if (canceled) return
         if (response.status === 307) {
@@ -391,15 +393,15 @@ Client.prototype._request2 = function (opts, cb) {
           return makeRequest(opts, tries, cb)
         }
         if (err) return cb(err)
-      });
-  };
+      })
+  }
 
   makeRequest(opts, tries, cb)
 
   return function destroy() {
     canceled = true
-    // Axios does not have a direct abort method
-  };
+    controller.abort()
+  }
 }
 
 module.exports = Client
