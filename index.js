@@ -41,7 +41,7 @@ var Client = function (host, opts) {
 
   if (!opts) opts = {}
 
-  var disc = opts.token || /^https:\/\/discovery\.etcd\.io\//.test(host || '')
+  var disc = opts.token || host?.startsWith('https://discovery.etcd.io/')
 
   this._discovery = disc ? opts.token || host : null
 
