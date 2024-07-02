@@ -1,6 +1,6 @@
 {
   "name": "@npmcorp/etcdjs",
-  "version": "2.4.7-test.0",
+  "version": "2.4.7-test.1",
   "description": "Low level etcd v2 client written in Javascript with failover support",
   "repository": "npm/etcdjs",
   "license": "MIT",
