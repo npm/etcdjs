@@ -41,7 +41,9 @@ var Client = function (host, opts) {
 
   if (!opts) opts = {}
 
-  var disc = opts.token || /^https:\/\/discovery\.etcd\.io\//.test(host || '');
+  if (typeof host === 'string') host = [host]
+
+  var disc = opts.token || host?.some(h => h.startsWith('http://discovery.etcd.io'))
 
   this._discovery = disc ? opts.token || host : null
 
