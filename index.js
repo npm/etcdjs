@@ -41,7 +41,9 @@ var Client = function (host, opts) {
 
   if (!opts) opts = {}
 
-  if (typeof host === 'string') host = [host]
+  if (typeof host === 'string') {
+    host = [host]
+  }
 
   var disc = opts.token || host?.some(h => h.startsWith('http://discovery.etcd.io/'))
 
