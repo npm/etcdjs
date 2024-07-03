@@ -1,11 +1,14 @@
 {
   "name": "@npmcorp/etcdjs",
-  "version": "2.4.5",
+  "version": "2.4.7",
   "description": "Low level etcd v2 client written in Javascript with failover support",
-  "repository": "npm/etcdjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npm/etcdjs.git"
+  },
   "license": "MIT",
   "dependencies": {
-    "request": "^2.88.2",
+    "axios": "^1.7.2",
     "roundround": "0.2.0"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 'use strict'
 
-var request = require('request')
 var roundround = require('roundround')
+const axios = require('axios')
 
 var noop = function () {}
 
@@ -41,7 +41,11 @@ var Client = function (host, opts) {
 
   if (!opts) opts = {}
 
-  var disc = opts.token || /^https:\/\/discovery\.etcd\.io\//.test(host || '')
+  if (typeof host === 'string') {
+    host = [host]
+  }
+
+  var disc = opts.token || host?.some(h => h.startsWith('http://discovery.etcd.io/'))
 
   this._discovery = disc ? opts.token || host : null
 
@@ -328,12 +332,13 @@ Client.prototype._resolveToken = function (cb) {
     while (self._wait.length) self._wait.shift()(err)
     self._wait = null
   }
+  const controller = new AbortController()
 
-  request(this._discovery, { json: true }, function (err, response) {
-    if (err) return done(err)
-    if (response.statusCode !== 200) return done(new Error('discovery token could not be resolved'))
+  axios.get(this._discovery, {signal: controller.signal})
+  .then(response => {
+    if (response.status !== 200) return done(new Error('discovery token could not be resolved'))
 
-    var nodes = response.body.node.nodes.map(function (node) {
+    var nodes = response.data.node.nodes.map(function (node) {
       return node.value.replace(/:7001/g, ':4001') // remap ports for now - there is probably a better way
     })
 
@@ -345,54 +350,61 @@ Client.prototype._resolveToken = function (cb) {
 
     done()
   })
+  .catch(err => {return done(err)})
+ controller.abort()
 }
 
 Client.prototype._request2 = function (opts, cb) {
   var self = this
   var tries = this._hosts.length
   var path = opts.uri[0] === '/' && opts.uri
-  if (path) opts.uri = this._next() + path
+  if (path) opts.url = this._next() + path // Change opts.uri to opts.url for axios
   opts.timeout = this._timeout
 
   var canceled = false
+  const controller = new AbortController()
 
   if (this._destroyed) return nextTick(cb, new Error('store destroyed'))
 
-  var req = request(opts, function onresponse (err, response) {
-    gc(self._requests, req)
-
+  var makeRequest = function(opts, tries, cb) {
     if (canceled) return
     if (self._destroyed) return cb(new Error('store destroyed'))
-    if (err && tries-- > 0) {
-      opts.uri = self._next() + path
-      return request(opts.uri, opts, onresponse)
-    }
-    if (err) return cb(err)
 
-    if (response.statusCode === 307) {
-      opts.uri = response.headers.location
-      return request(opts.uri, opts, onresponse)
-    }
-    if (response.statusCode === 404 && (!opts.method || opts.method === 'GET')) return cb()
-    if (response.statusCode > 299) return cb(toError(response))
+    axios(opts, {signal: controller.signal})
+      .then(response => {
+        if (canceled) return
+        if (response.status === 307) {
+          opts.url = response.headers.location // Change opts.uri to opts.url for axios
+          return makeRequest(opts, tries, cb)
+        }
+        if (response.status === 404 && (!opts.method || opts.method === 'GET')) return cb()
+        if (response.status > 299) return cb(toError(response))
 
-    var body = response.body
-    if (!self._json || !body.node) return cb(null, body)
+        var body = response.data // Change response.body to response.data for axios
+        if (!self._json || !body.node) return cb(null, body)
 
-    try {
-      decodeJSON(body.node)
-    } catch (err) {
-      return cb(err)
-    }
+        try {
+          decodeJSON(body.node)
+        } catch (err) {
+          return cb(err)
+        }
 
-    cb(null, body)
-  })
+        cb(null, body)
+      })
+      .catch(err => {
+        if (tries-- > 0) {
+          opts.url = self._next() + path // Change opts.uri to opts.url for axios
+          return makeRequest(opts, tries, cb)
+        }
+        if (err) return cb(err)
+      })
+  }
 
-  this._requests.push(req)
+  makeRequest(opts, tries, cb)
 
-  return function destroy () {
+  return function destroy() {
     canceled = true
-    req.abort()
+    controller.abort()
   }
 }
 
